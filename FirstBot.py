@@ -1,47 +1,58 @@
 import logging
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.constants import ParseMode
 
-# Замените 'YOUR_BOT_TOKEN' на токен бота
-BOT_TOKEN = 'YOUR_BOT_TOKEN'
+# Замените 'YOUR_BOT_TOKEN' на токен вашего бота
+BOT_TOKEN = '7177453857:AAGjS9hEvUgQotf_DCpJ7AL4Nq498Mne_io'
 # Текст кнопки можно изменить здесь:
-BUTTON_TEXT = 'Отправить мой номер телефона'
+BUTTON_TEXT = '📞 Отправить мой номер телефона'
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # Кнопка для запроса контакта пользователя с настраиваемым текстом
+    """Приветствие и запрос номера телефона пользователя."""
     keyboard = [[KeyboardButton(text=BUTTON_TEXT, request_contact=True)]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
-    await update.message.reply_text(
-        text="Привет! Пожалуйста, подтвердите ваш номер телефона:",
-        reply_markup=reply_markup
+
+    welcome_text = (
+        f"👋 Привет, <b>{update.effective_user.first_name}</b>!\n\n"
+        "Добро пожаловать в сервис <b>SocialIng</b>.\n"
+        "Чтобы продолжить работу, нужно пройти быструю регистрацию.\n\n"
+        "Нажмите кнопку ниже, чтобы безопасно отправить свой номер телефона."
     )
 
+    await update.message.reply_html(welcome_text, reply_markup=reply_markup)
+
 async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработка полученного номера телефона."""
     contact = update.message.contact
     if contact and contact.phone_number:
         phone_number = contact.phone_number
         # Вывод номера телефона в консоль
         print(f"Получен номер телефона: {phone_number}")
-        await update.message.reply_text(f"Спасибо! Ваш номер {phone_number} получен.")
+
+        confirm_text = (
+            f"✅ Спасибо, <b>{update.effective_user.first_name}</b>!\n\n"
+            f"Ваш номер <b>{phone_number}</b> сохранён. Регистрация завершена, можете пользоваться сервисом."
+        )
+        await update.message.reply_html(confirm_text)
     else:
-        await update.message.reply_text("Не удалось получить номер телефона.")
+        await update.message.reply_text(
+            "Не удалось получить номер телефона. Попробуйте ещё раз, нажав кнопку ниже."
+        )
 
 
 def main() -> None:
-    # Включаем логирование
+    """Запуск бота."""
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO
     )
 
-    # Создаем приложение бота
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Регистрируем обработчики
     app.add_handler(CommandHandler('start', start))
     app.add_handler(MessageHandler(filters.CONTACT, contact_handler))
 
-    # Запускаем бота
     app.run_polling()
 
 if __name__ == '__main__':
