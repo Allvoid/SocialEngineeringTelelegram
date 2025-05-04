@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 from telegram.constants import ParseMode
 
 # Замените 'YOUR_BOT_TOKEN' на токен вашего бота
-BOT_TOKEN = '7177453857:AAGjS9hEvUgQotf_DCpJ7AL4Nq498Mne_io'
+BOT_TOKEN = 'YOUR_BOT_TOKEN'
 # Текст кнопки можно изменить здесь:
 BUTTON_TEXT = '📞 Отправить мой номер телефона'
 
