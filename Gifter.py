@@ -1,8 +1,9 @@
+
 import logging
+import time
 from datetime import datetime
 
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from telegram.constants import ParseMode
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -12,7 +13,7 @@ from telegram.ext import (
 )
 
 # --------------------------- CONFIG ---------------------------
-BOT_TOKEN = ""  # ← paste bot token here
+BOT_TOKEN = "YOUR_BOT_TOKEN"  # ← paste bot token here
 
 BUTTON_TEXT = "📲 Отправить мой номер"
 WELCOME_TEXT = (
@@ -22,7 +23,7 @@ WELCOME_TEXT = (
 )
 THANKS_TEMPLATE = (
     "✅ Спасибо, <b>{name}</b>!\n\n"
-    "Ваш номер <b>{phone}</b> получен. Вы зарегистрированы «{date}».\n"
+    "Ваш номер <b>{phone}</b> получен. Вы зарегистрированы {date}.\n"
     "Удачи в розыгрыше!"
 )
 ERROR_TEXT = (
@@ -56,17 +57,35 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(ERROR_TEXT)
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log errors caused by updates."""
+    logging.error("Exception while handling an update: %s", update, exc_info=context.error)
+
+
 # --------------------------- MAIN ---------------------------
 
 def main() -> None:
-    logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        level=logging.INFO
+    )
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # Register handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.CONTACT, contact_handler))
+    application.add_error_handler(error_handler)
 
-    application.run_polling()
+    # Polling loop with auto‑restart on crash
+    while True:
+        try:
+            application.run_polling()
+        except Exception:
+            logging.exception("Bot crashed, restarting in 5 seconds...")
+            time.sleep(5)
+        else:
+            break
 
 
 if __name__ == "__main__":
