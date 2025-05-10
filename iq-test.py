@@ -1,8 +1,16 @@
 import logging
+import time
 from datetime import datetime
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, ConversationHandler, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    ContextTypes,
+    CommandHandler,
+    MessageHandler,
+    ConversationHandler,
+    filters,
+)
 
 # Включаем логирование
 logging.basicConfig(
@@ -15,70 +23,98 @@ logger = logging.getLogger(__name__)
 DOB, CONTACT = range(2)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    # Приветственное сообщение и запрос даты рождения
-    await update.message.reply_text(
-        "Добро пожаловать на *IQ-тест*!",
-        parse_mode=ParseMode.MARKDOWN
-    )
-    await update.message.reply_text(
-        "Привет! Чтобы подготовить тест для вас, укажи дату рождения.\n"
-        "Формат: ДД.MM.ГГГГ"
-    )
-    return DOB
+    try:
+        await update.message.reply_text(
+            "Добро пожаловать на *IQ-тест*!",
+            parse_mode=ParseMode.MARKDOWN
+        )
+        await update.message.reply_text(
+            "Привет! Чтобы подготовить тест для вас, укажи дату рождения.\n"
+            "Формат: ДД.MM.ГГГГ"
+        )
+        return DOB
+    except Exception as e:
+        logger.exception("Error in start handler")
+        # ничего не ломаем — завершаем разговор
+        return ConversationHandler.END
 
 async def dob_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    text = update.message.text.strip()
     try:
-        # Проверяем формат даты
+        text = update.message.text.strip()
         dob = datetime.strptime(text, "%d.%m.%Y")
         context.user_data['dob'] = text
+
+        button = KeyboardButton("☎️ Отправить номер", request_contact=True)
+        markup = ReplyKeyboardMarkup(
+            [[button]],
+            one_time_keyboard=True,
+            resize_keyboard=True
+        )
+        await update.message.reply_text(
+            "Спасибо! Остался последний шаг для доступа к тестированию.\n"
+            "Нажми кнопку 👇, чтобы безопасно передать свой номер телефона для регистрации.",
+            reply_markup=markup
+        )
+        return CONTACT
     except ValueError:
         await update.message.reply_text(
             "Неверный формат. Пожалуйста, укажи дату в формате ДД.MM.ГГГГ"
         )
         return DOB
-
-    # Готовим кнопку для отправки контактных данных
-    button = KeyboardButton("☎️ Отправить номер", request_contact=True)
-    markup = ReplyKeyboardMarkup([[button]], one_time_keyboard=True, resize_keyboard=True)
-
-    await update.message.reply_text(
-        "Спасибо! Остался последний шаг для доступа к тестированию.\n"
-        "Нажми кнопку 👇, чтобы безопасно передать свой номер телефона для регистрации.",
-        reply_markup=markup
-    )
-    return CONTACT
+    except Exception as e:
+        logger.exception("Error in dob_handler")
+        return ConversationHandler.END
 
 async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    contact = update.message.contact
-    phone = contact.phone_number
-    dob = context.user_data.get('dob')
+    try:
+        contact = update.message.contact
+        if not contact or not contact.phone_number:
+            # непредвиденный формат сообщения
+            await update.message.reply_text("Не удалось получить контакт. Попробуйте ещё раз.")
+            return CONTACT
 
-    # Выводим данные пользователя в консоль
-    print(f"User ID: {update.effective_user.id}, Date of Birth: {dob}, Phone: {phone}")
+        phone = contact.phone_number
+        dob = context.user_data.get('dob', 'не указан')
 
-    await update.message.reply_text(
-        "Спасибо! Данные получены.",
-        reply_markup=ReplyKeyboardRemove()
-    )
-    return ConversationHandler.END
+        # Логируем (или обрабатываем) данные
+        logger.info(f"User ID: {update.effective_user.id}, DOB: {dob}, Phone: {phone}")
+
+        await update.message.reply_text(
+            "Спасибо! Данные получены.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return ConversationHandler.END
+    except Exception as e:
+        logger.exception("Error in contact_handler")
+        await update.message.reply_text("Произошла ошибка при получении контакта.")
+        return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text(
-        "Регистрация отменена.",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    try:
+        await update.message.reply_text(
+            "Регистрация отменена.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+    except Exception:
+        pass
     return ConversationHandler.END
 
+# общий обработчик ошибок
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Exception while handling an update:", exc_info=context.error)
+    # если можем — предупредить пользователя
+    if hasattr(update, "message") and update.message:
+        try:
+            await update.message.reply_text(
+                "Упс! Что-то пошло не так. Пожалуйста, попробуйте снова позже."
+            )
+        except Exception:
+            pass
 
 def main() -> None:
-    # Замените 'YOUR_BOT_TOKEN' на токен вашего бота
     BOT_TOKEN = 'YOUR_BOT_TOKEN'
-
-    # Создаем приложение
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Настраиваем ConversationHandler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
@@ -89,10 +125,15 @@ def main() -> None:
     )
 
     app.add_handler(conv_handler)
+    app.add_error_handler(error_handler)
 
-    # Запускаем бота
-    app.run_polling()
-
+    # Защита от падений: при исключении в run_polling автоматом перезапустим через 5 сек
+    while True:
+        try:
+            app.run_polling()
+        except Exception:
+            logger.exception("Polling crashed — restarting in 5 seconds")
+            time.sleep(5)
 
 if __name__ == '__main__':
     main()
