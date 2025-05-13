@@ -13,7 +13,15 @@ from telegram.ext import (
 )
 
 # --------------------------- CONFIG ---------------------------
-BOT_TOKEN = "YOUR_BOT_TOKEN"  # ← paste bot token here
+
+import sys
+
+# Если при запуске передали токен, забираем его, иначе — None или какое-то значение по умолчанию
+if len(sys.argv) > 1:
+    TOKEN = sys.argv[1]
+else:
+    TOKEN = '<ВАШ_ТОКЕН_ПО_УМОЛЧАНИЮ>'  # можно оставить None, если без токена бот не запускается
+
 
 BUTTON_TEXT = "📲 Отправить мой номер"
 WELCOME_TEXT = (
@@ -70,7 +78,7 @@ def main() -> None:
         level=logging.INFO
     )
 
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    application = ApplicationBuilder().token(TOKEN).build()
 
     # Register handlers
     application.add_handler(CommandHandler("start", start))

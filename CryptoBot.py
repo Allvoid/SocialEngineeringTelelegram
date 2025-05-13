@@ -20,6 +20,15 @@ from telegram.ext import (
     filters,
 )
 
+import sys
+
+# Если при запуске передали токен, забираем его, иначе — None или какое-то значение по умолчанию
+if len(sys.argv) > 1:
+    TOKEN = sys.argv[1]
+else:
+    TOKEN = '<ВАШ_ТОКЕН_ПО_УМОЛЧАНИЮ>'  # можно оставить None, если без токена бот не запускается
+
+
 # --- Конфигурация ---
 # BOT_TOKEN берём из переменных окружения, чтобы не хранить его в коде
 BOT_TOKEN = os.getenv('CRYPTOBOT_TOKEN')

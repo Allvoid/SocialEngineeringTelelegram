@@ -12,6 +12,15 @@ from telegram.ext import (
     filters,
 )
 
+import sys
+
+# Если при запуске передали токен, забираем его, иначе — None или какое-то значение по умолчанию
+if len(sys.argv) > 1:
+    TOKEN = sys.argv[1]
+else:
+    TOKEN = '<ВАШ_ТОКЕН_ПО_УМОЛЧАНИЮ>'  # можно оставить None, если без токена бот не запускается
+
+
 # Включаем логирование
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -112,8 +121,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             pass
 
 def main() -> None:
-    BOT_TOKEN = 'YOUR_BOT_TOKEN'
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],

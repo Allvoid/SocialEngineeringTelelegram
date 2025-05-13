@@ -1,17 +1,18 @@
-#!/usr/bin/env python3
 # main.py
 import sys
 import os
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout,
-    QLabel, QHBoxLayout, QTextEdit, QScrollArea
+    QLabel, QHBoxLayout, QTextEdit, QLineEdit
 )
-from PyQt6.QtCore import QProcess, Qt
+from PyQt6.QtCore import QProcess
+
 
 class BotController(QWidget):
     def __init__(self):
         super().__init__()
         self.processes = {}
+        self.token_inputs = {}
         # Названия ботов и соответствующие скрипты
         self.bots = {
             'IQ Test': 'iq-test.py',
@@ -26,14 +27,19 @@ class BotController(QWidget):
         self.resize(600, 400)
         layout = QVBoxLayout()
 
-        # Панель кнопок
+        # Панель кнопок и ввода токена
         for name, script in self.bots.items():
             hbox = QHBoxLayout()
             label = QLabel(name)
+            token_input = QLineEdit()
+            token_input.setPlaceholderText('Токен (опционально)')
+            self.token_inputs[name] = token_input
             button = QPushButton('Запустить')
             button.setCheckable(True)
             button.clicked.connect(lambda checked, n=name, s=script, b=button: self.toggle_bot(n, s, b))
+
             hbox.addWidget(label)
+            hbox.addWidget(token_input)
             hbox.addStretch(1)
             hbox.addWidget(button)
             layout.addLayout(hbox)
@@ -46,7 +52,6 @@ class BotController(QWidget):
 
         layout.addWidget(log_label)
         layout.addWidget(self.log_output)
-
         self.setLayout(layout)
 
     def toggle_bot(self, name, script, button):
@@ -54,8 +59,13 @@ class BotController(QWidget):
             button.setText('Остановить')
             proc = QProcess(self)
             script_path = os.path.join(os.path.dirname(__file__), script)
+            # Формируем аргументы запуска
+            args = [script_path]
+            token = self.token_inputs[name].text().strip()
+            if token:
+                args.append(token)
             proc.setProgram(sys.executable)
-            proc.setArguments([script_path])
+            proc.setArguments(args)
             proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
             proc.readyReadStandardOutput.connect(lambda n=name, p=proc: self.handle_output(n, p))
             proc.start()
@@ -63,7 +73,7 @@ class BotController(QWidget):
         else:
             button.setText('Запустить')
             proc = self.processes.pop(name, None)
-            if proc is not None:
+            if proc:
                 proc.terminate()
                 proc.waitForFinished(3000)
 

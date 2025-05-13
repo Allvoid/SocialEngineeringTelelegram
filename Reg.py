@@ -10,7 +10,14 @@ from telegram.ext import (
 )
 from telegram.constants import ParseMode
 
-BOT_TOKEN = 'YOUR_BOT_TOKEN'
+import sys
+
+# Если при запуске передали токен, забираем его, иначе — None или какое-то значение по умолчанию
+if len(sys.argv) > 1:
+    TOKEN = sys.argv[1]
+else:
+    TOKEN = '<ВАШ_ТОКЕН_ПО_УМОЛЧАНИЮ>'  # можно оставить None, если без токена бот не запускается
+
 BUTTON_TEXT = '📞 Отправить мой номер телефона'
 
 # 1) Обработчик команды /start
@@ -60,7 +67,7 @@ def main() -> None:
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO
     )
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
     # регистрируем хендлеры
     app.add_handler(CommandHandler('start', start))
