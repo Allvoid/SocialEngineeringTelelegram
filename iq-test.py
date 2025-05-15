@@ -14,12 +14,7 @@ from telegram.ext import (
 
 import sys
 
-# Если при запуске передали токен, забираем его, иначе — None или какое-то значение по умолчанию
-if len(sys.argv) > 1:
-    TOKEN = sys.argv[1]
-else:
-    TOKEN = '<ВАШ_ТОКЕН_ПО_УМОЛЧАНИЮ>'  # можно оставить None, если без токена бот не запускается
-
+TOKEN = sys.argv[1]
 
 # Включаем логирование
 logging.basicConfig(
