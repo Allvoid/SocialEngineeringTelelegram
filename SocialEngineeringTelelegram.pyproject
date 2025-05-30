@@ -3,6 +3,9 @@
         "CryptoBot.py",
         "Gifter.py",
         "Reg.py",
+        "bot_controller.py",
+        "config_manager.py",
+        "constants.py",
         "iq-test.py",
         "main.py"
     ]
